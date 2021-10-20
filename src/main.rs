@@ -32,6 +32,12 @@ fn main() {
                         println!("invalid input for x");
                         continue;
                     }
+                    /* i know that this and the corresponding line for the y-input
+                     * break if the user enters a 0.. i'll fix that later
+                     *
+                     * this part of the code was kind of shoved in last-minute
+                     * anyways. hoping noone notices !
+                     */
                     pos[0] = i - 1;
                 },
                 Err(_) => {println!("invalid input for x"); continue},
