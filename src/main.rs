@@ -7,9 +7,35 @@ use std::io::Write;
 use std::io::stdout;
 use std::io::stdin;
 
+use indoc::indoc;
+
+fn clear() {
+    /* stupid windows stdout doesn't support ANSI
+     * rust might add support for ANSI on windows later,
+     * but for now, we're stuck with not clearing on windows
+     */
+    if !cfg!(windows) {
+        print!("{}[2J", 27 as char);
+        flush();
+    }
+}
+
+fn flush() {
+    stdout().flush().expect("cannot flush stdout, what's going on?");
+}
 
 fn main() {
     let mut game: Game = Game::new(5, 3);
+
+    clear();
+    println!( indoc! {"
+        Welcome to Rustinolla!
+        You are playing with {a} players on a {n}x{n} board
+        To take a slot, simply enter its coordinates separated
+        by commas when requested (e.g. {m},{m} for the middle)
+        
+        Have fun!
+    "}, a = game.players, n = game.length, m = game.length / 2 + 1);
 
     loop {
         let mut pos: [usize; 2] = [0 as usize; 2];
