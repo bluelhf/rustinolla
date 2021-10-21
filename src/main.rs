@@ -1,8 +1,9 @@
 mod game;
-mod occupied_error;
 
 use game::Game;
-use occupied_error::OccupiedError;
+use game::State;
+
+use std::cmp::*;
 use std::io::Write;
 use std::io::stdout;
 use std::io::stdin;
@@ -38,68 +39,50 @@ fn main() {
     "}, a = game.players, n = game.length, m = game.length / 2 + 1);
 
     loop {
-        let mut pos: [usize; 2] = [0 as usize; 2];
         loop {
-            println!("");
-            println!("now playing: {}", game.to_str(game.current_player()));
-            game.show_current();
-
-            print!("player {}, enter column,row: ", game.to_str(game.current_player()));
-            stdout().flush().unwrap();
+            println!("now playing: {}", game.current_symbol());
+            game.show("current");
 
             let mut input = String::new();
-            stdin().read_line(&mut input).unwrap();
-            input = input.trim().to_string();
 
-            let split: Vec<&str> = input.split(",").collect();
-            match split[0].trim().parse::<usize>() {
-                Ok(i) => {
-                    if i > game.length() {
-                        println!("invalid input for x");
-                        continue;
-                    }
-                    /* i know that this and the corresponding line for the y-input
-                     * break if the user enters a 0.. i'll fix that later
-                     *
-                     * this part of the code was kind of shoved in last-minute
-                     * anyways. hoping noone notices !
-                     */
-                    pos[0] = i - 1;
-                },
-                Err(_) => {println!("invalid input for x"); continue},
-            };
+            print!("player {}, enter column,row: ", game.current_symbol());
+            flush();
+            stdin().read_line(&mut input).expect("cannot read stdin, what's going on?");
 
-            match split[1].trim().parse::<usize>() {
-                Ok(i) => {
-                    if i > game.length() {
-                        println!("invalid input for y");
+            // rust doesn't let us convert this iterator to a tuple...
+            let mut it = input.splitn(2, ",")
+                .map(|s| s.trim())
+                .map(|s| s.parse::<usize>());
+            match (it.next(), it.next()) {
+                (Some(Ok(x)), Some(Ok(y))) => {
+                    if max(x, y) > game.length || min(x, y) < 1 {
+                        println!("invalid input");
                         continue;
                     }
 
-                    pos[1] = i - 1;
+                    match game.place(x - 1, y - 1) {
+                        Ok(()) => break,
+                        Err(_) => println!("that position is occupied"),
+                    };
                 },
-                Err(_) => {println!("invalid input for y"); continue},
-            };
-
-            match game.place(pos[0], pos[1]) {
-                Ok(()) => {break;},
-                Err(_) => println!("that position is occupied"),
+                _ => println!("invalid input"),
             };
         }
 
-        let out = game.check();
-        match out {
-            -1 => {},
-            -2 => {
+        match game.check() {
+            State::TIE => {
                 game.show("tying");
                 println!("game was a tie.");
                 break;
             },
-            _ => {
+            State::WINNER(winner) => {
                 game.show("winning");
-                println!("player {} wins!", game.to_str(out as u8));
+                println!("player {} wins!", game.to_str(winner));
                 break;
-            }
-        }
+            },
+            _ => {},
+        };
+
+        clear();
     }
 }

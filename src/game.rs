@@ -1,11 +1,40 @@
-use crate::OccupiedError;
+use std::error::Error;
+use std::fmt;
+
+#[derive(Debug)]
+pub struct OccupiedError {
+
+}
+
+impl fmt::Display for OccupiedError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "The given position was occupied").unwrap();
+        Ok(())
+    }
+}
+
+impl Error for OccupiedError {
+
+}
+
+impl OccupiedError {
+    pub fn new() -> Self {
+        Self { }
+    }
+}
 
 #[derive(Debug)]
 pub struct Game {
-    length: usize,
+    pub length: usize,
     board: Vec<Vec<u8>>,
-    players: u8,
+    pub players: u8,
     current_player: u8
+}
+
+pub enum State {
+    DEFAULT,
+    TIE,
+    WINNER(u8),
 }
 
 impl Game {
@@ -16,10 +45,9 @@ impl Game {
 
 	    let mut board = Vec::with_capacity(len);
         board.resize(len, line);
+
         Self { length: len, board, players, current_player: 1 }
     }
-
-    pub fn length(&self) -> usize { self.length }
 
     pub fn place(&mut self, x: usize, y: usize) -> Result<(), OccupiedError> {
         if self.board[y][x] == 0 {
@@ -31,65 +59,23 @@ impl Game {
         }
     }
 
-    pub fn current_player(&self) -> u8 {
-        self.current_player
-    }
-
-    pub fn to_str(&self, num: u8) -> String {
-        if num == 0 {return "□".to_string()}
-        if self.players <= 2 { if num == 1 {return "x".to_string();} else if num == 2 {return "o".to_string();} }
-        num.to_string().to_owned()
-    }
-
-    pub fn show_current(&self) {
-        self.show("current")
-    }
-
-    pub fn show(&self, tagline: &str) {
-
-        println!("{} board", tagline);
-        println!("");
-
-        let mut rows: Vec<String> = Vec::with_capacity(self.length + 1);
-        let mut build = "0".to_string();
-        for i in 1..(self.length + 1) {
-            build = format!("{} {}", build, &i.to_string());
-        }
-        rows.push(build);
-
-        for y in 1..self.length+1 {
-            let mut build = y.to_string();
-            for x in 0..self.length {
-                build = format!("{} {}", build, &self.to_str(self.board[y - 1][x]));
-            }
-            rows.push(build);
-        }
-        for row in rows {
-            println!("{}", row);
-        }
-    }
-
     fn new_player(&mut self) {
         self.current_player = (self.current_player + 1) % (self.players + 1);
         if self.current_player == 0 { self.current_player = 1; }
     }
 
-    pub fn check(&self) -> i8 {
-        /*
-         * this function keeps track of whether a change has occurred in any specific row, column, or diagonal in the board
-         * 0 => no value defined, overridden when iterating over the board => no win condition yet
-         * -1 => more than one player has occupied a slot => no win condition here
-         * _  => a player has occupied every slot => that player wins
-         */
-        
+
+    pub fn check(&self) -> State {
         let mut tie = true;
         for y in 0..self.length {
             for x in 0..self.length {
                 if self.board[y][x] != 0 { tie = false; break; }
             }
         }
-        if tie { return -2; }
+        if tie { return State::TIE; }
 
+
+        // here and in subsequent checks, -2 = not set, -1 = changes, n>0 = win condition for player n
         let mut vert: Vec<i8> = vec![-2; self.length];
 
         for y in 0..self.length {
@@ -103,11 +89,11 @@ impl Game {
                 if vert[x] == -2 { vert[x] = slot as i8; }
                 if vert[x] != slot as i8 { vert[x] = -1; }
             }
-            if hori > 0 { return hori; }
+            if hori > 0 { return State::WINNER(hori as u8); }
         }
 
         for col in vert {
-            if col > 0 { return col; }
+            if col > 0 { return State::WINNER(col as u8); }
         }
 
         let mut x: usize = 0;
@@ -123,7 +109,7 @@ impl Game {
             x = x + 1;
             y = y + 1;
         };
-        if checker > 0 { return checker; };
+        if checker > 0 { return State::WINNER(checker as u8); };
         let mut x: usize = self.length - 1;
         let mut y: usize = 0;
         let mut checker = -2i8;
@@ -135,7 +121,41 @@ impl Game {
             y = y + 1;
         };
 
-        if checker > 0 { return checker; };
-        -1
+        if checker > 0 { return State::WINNER(checker as u8); };
+        State::DEFAULT
+    }
+
+    pub fn show(&self, tagline: &str) {
+        println!("{} board\n", tagline);
+
+        let mut rows: Vec<String> = Vec::with_capacity(self.length + 1);
+        let mut build = "0".to_string();
+        for i in 1..(self.length + 1) {
+            build = format!("{} {}", build, &i.to_string());
+        }
+
+        rows.push(build);
+
+        for y in 1..self.length+1 {
+            let mut build = y.to_string();
+            for x in 0..self.length {
+                build = format!("{} {}", build, &self.to_str(self.board[y - 1][x]));
+            }
+            rows.push(build);
+        }
+
+        for row in rows {
+            println!("{}", row);
+        }
+    }
+
+    pub fn current_symbol(&self) -> String {
+        self.to_str(self.current_player)
+    }
+
+    pub fn to_str(&self, num: u8) -> String {
+        if num == 0 {return "□".to_string()}
+        if self.players <= 2 { if num == 1 {return "x".to_string();} else if num == 2 {return "o".to_string();} }
+        num.to_string().to_owned()
     }
 }
