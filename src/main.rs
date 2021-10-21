@@ -51,8 +51,7 @@ fn main() {
 
             // rust doesn't let us convert this iterator to a tuple...
             let mut it = input.splitn(2, ",")
-                .map(|s| s.trim())
-                .map(|s| s.parse::<usize>());
+                .map(|s| s.trim().parse::<usize>());
             match (it.next(), it.next()) {
                 (Some(Ok(x)), Some(Ok(y))) => {
                     if max(x, y) > game.length || min(x, y) < 1 {
