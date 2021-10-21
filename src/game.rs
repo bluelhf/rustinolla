@@ -96,8 +96,8 @@ impl Game {
             if col > 0 { return State::WINNER(col as u8); }
         }
 
-        let mut x: usize = 0;
-        let mut y: usize = 0;
+        let mut x = 0usize;
+        let mut y = 0usize;
         let mut checker = -2i8;
         for _i in 0..self.length {
             if checker == -2 { checker = self.board[y][x] as i8; }
@@ -111,7 +111,7 @@ impl Game {
         };
         if checker > 0 { return State::WINNER(checker as u8); };
         let mut x: usize = self.length - 1;
-        let mut y: usize = 0;
+        let mut y = 0usize;
         let mut checker = -2i8;
         for _i in 1..self.length {
             if checker == -2 { checker = self.board[y][x] as i8; }
