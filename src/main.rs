@@ -26,7 +26,8 @@ fn flush() {
 }
 
 fn main() {
-    let mut game: Game = Game::new(5, 3);
+    let mut game: Game = Game::new(3, 2);
+    let auto: bool = true;
 
     clear();
     println!( indoc! {"
@@ -43,29 +44,34 @@ fn main() {
             println!("now playing: {}", game.current_symbol());
             game.show("current");
 
-            let mut input = String::new();
-
-            print!("player {}, enter column,row: ", game.current_symbol());
-            flush();
-            stdin().read_line(&mut input).expect("cannot read stdin, what's going on?");
-
-            // rust doesn't let us convert this iterator to a tuple...
-            let mut it = input.splitn(2, ",")
-                .map(|s| s.trim().parse::<usize>());
-            match (it.next(), it.next()) {
-                (Some(Ok(x)), Some(Ok(y))) => {
-                    if max(x, y) > game.length || min(x, y) < 1 {
-                        println!("invalid input");
-                        continue;
-                    }
-
-                    match game.place(x - 1, y - 1) {
-                        Ok(()) => break,
-                        Err(_) => println!("that position is occupied"),
-                    };
-                },
-                _ => println!("invalid input"),
-            };
+            if game.current_player != 1 && auto {
+                let mut best = game.minimax(-1);
+                game.place(best.0, best.1);
+            } else {
+                let mut input = String::new();
+                print!("player {}, enter column,row: ", game.current_symbol());
+                
+                flush();
+                stdin().read_line(&mut input).expect("cannot read stdin, what's going on?");
+    
+                // rust doesn't let us convert this iterator to a tuple...
+                let mut it = input.splitn(2, ",")
+                    .map(|s| s.trim().parse::<usize>());
+                match (it.next(), it.next()) {
+                    (Some(Ok(x)), Some(Ok(y))) => {
+                        if max(x, y) > game.length || min(x, y) < 1 {
+                            println!("invalid input");
+                            continue;
+                        }
+    
+                        match game.place(x - 1, y - 1) {
+                            Ok(()) => break,
+                            Err(_) => println!("that position is occupied"),
+                        };
+                    },
+                    _ => println!("invalid input"),
+                };
+            }
         }
 
         match game.check() {

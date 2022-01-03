@@ -24,13 +24,15 @@ impl OccupiedError {
 }
 
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct Game {
     pub length: usize,
     board: Vec<Vec<u8>>,
     pub players: u8,
-    current_player: u8
+    pub current_player: u8
 }
 
+#[derive(PartialEq)]
 pub enum State {
     DEFAULT,
     TIE,
@@ -64,6 +66,46 @@ impl Game {
         if self.current_player == 0 { self.current_player = 1; }
     }
 
+    fn possible_moves(&self) -> Vec<(usize, usize)> {
+        let mut moves: Vec<(usize, usize)> = Vec::new();
+        for y in 0..self.length {
+            for x in 0..self.length {
+                if self.board[y][x] == 0 {
+                    moves.push((x, y));
+                }
+            }
+        }
+
+        return moves;
+    }
+
+    pub fn minimax(&self, colour: i8) -> (usize, usize, i8) {
+        let term = self.check();
+        if term != State::DEFAULT {
+            return (0, 0, colour * (
+                if term == State::TIE { 0 }
+                else if term == State::WINNER(self.current_player) { 1 } 
+                else { -1 }
+            ));
+        }
+
+        let mut value: i8 = -10;
+        let mut x = 0 as usize;
+        let mut y = 0 as usize;
+        for mv in self.possible_moves() {
+            let mut clone: Game = self.clone();
+            clone.place(mv.0, mv.1).unwrap();
+            clone.current_player = self.current_player + 1;
+            let new_val = -clone.minimax(-colour).2;
+            if new_val >= value {
+                x = mv.0;
+                y = mv.1;
+                value = new_val;
+            }
+        }
+
+        return (x, y, value);
+    }
 
     pub fn check(&self) -> State {
         let mut tie = true;
@@ -120,6 +162,9 @@ impl Game {
             x = x - 1;
             y = y + 1;
         };
+
+        if checker == -2 { checker = self.board[y][x] as i8; }
+        if checker != self.board[y][x] as i8 { checker = -1; }
 
         if checker > 0 { return State::WINNER(checker as u8); };
         State::DEFAULT
